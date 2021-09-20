@@ -1,4 +1,5 @@
 import os
+import argparse
 import re
 import torch
 import numpy as np
@@ -8,11 +9,10 @@ from torch.utils.data import DataLoader
 from data_aug import get_training_augmentation, get_validation_augmentation, get_preprocessing
 
 
-def train():
-    data_dir = "/home/kb/Documents/data/Tokaido_dataset"
+def train(cfg):
 
-    x_dir = os.path.join(data_dir, 'img_syn_raw', 'train')
-    y_dir = os.path.join(data_dir, 'synthetic', 'train', 'labcmp')
+    x_dir = os.path.join(cfg.data_path, 'img_syn_raw', 'train')
+    y_dir = os.path.join(cfg.data_path, 'synthetic', 'train', 'labcmp')
 
     files = os.listdir(x_dir)
     cases = np.zeros(len(files), dtype=int)
@@ -39,19 +39,14 @@ def train():
 
     classes = ["slab", "beam", "column", "nonstructural components", "rail", "sleeper"]
 
-    encoder = 'efficientnet-b0'
-    encoder_weights = 'imagenet'
-    activation = 'sigmoid'
-    device = 'cpu'
-
     model = smp.Unet(
-        encoder_name=encoder,
-        encoder_weights=encoder_weights,
+        encoder_name=cfg.backbone,
+        encoder_weights=cfg.pretrained,
         classes=len(classes),
-        activation=activation
+        activation=cfg.activation
     )
 
-    preprocessing_fn = smp.encoders.get_preprocessing_fn(encoder, encoder_weights)
+    preprocessing_fn = smp.encoders.get_preprocessing_fn(cfg.backbone, cfg.pretrained)
 
     train_dataset = Dataset(
         x_dir,
@@ -73,8 +68,8 @@ def train():
         classes=classes,
     )
 
-    train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=4)
-    valid_loader = DataLoader(valid_dataset, batch_size=1, shuffle=True, num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.num_workers)
+    valid_loader = DataLoader(valid_dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.num_workers)
 
     # Dice/F1 score - https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient
     # IoU/Jaccard score - https://en.wikipedia.org/wiki/Jaccard_index
@@ -85,7 +80,7 @@ def train():
     ]
 
     optimizer = torch.optim.Adam([
-        dict(params=model.parameters(), lr=0.0001),
+        dict(params=model.parameters(), lr=cfg.learning_rate),
     ])
 
     # create epoch runners
@@ -95,7 +90,7 @@ def train():
         loss=loss,
         metrics=metrics,
         optimizer=optimizer,
-        device=device,
+        device=cfg.device,
         verbose=True,
     )
 
@@ -103,7 +98,7 @@ def train():
         model,
         loss=loss,
         metrics=metrics,
-        device=device,
+        device=cfg.device,
         verbose=True,
     )
 
@@ -131,4 +126,24 @@ def train():
 
 
 if __name__ == "__main__":
-    train()
+
+    parser = argparse.ArgumentParser(description="parse args")
+
+    # I/O parameters
+    parser.add_argument('--root-path', type=str, default='.')
+    parser.add_argument('--data_path', type=str, default='/home/kb/Documents/data/Tokaido_dataset')
+
+    # Model parameters
+    parser.add_argument('--backbone', type=str, default='efficientnet-b0')
+    parser.add_argument('--pretrained', type=str, default='imagenet')
+    parser.add_argument('--activation', type=str, default='sigmoid')
+    parser.add_argument('--device', type=str, default='cpu')
+
+    # Training parameters
+    parser.add_argument('--batch-size', type=int, default=8)
+    parser.add_argument('--num-workers', type=int, default=8)
+    parser.add_argument('--learning-rate', type=float, default=1e-4)
+
+    # Machine parameters
+    args = parser.parse_args()
+    train(args)
