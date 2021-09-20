@@ -131,7 +131,7 @@ if __name__ == "__main__":
 
     # I/O parameters
     parser.add_argument('--root-path', type=str, default='.')
-    parser.add_argument('--data_path', type=str, default='/home/kb/Documents/data/Tokaido_dataset')
+    parser.add_argument('--data-path', type=str, default='/home/kb/Documents/data/Tokaido_dataset')
 
     # Model parameters
     parser.add_argument('--backbone', type=str, default='efficientnet-b0')
