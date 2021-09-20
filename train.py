@@ -1,3 +1,5 @@
+from comet_ml import Experiment
+
 import os
 import argparse
 import re
@@ -10,6 +12,10 @@ from data_aug import get_training_augmentation, get_validation_augmentation, get
 
 
 def train(cfg):
+
+    hyperparams = vars(cfg)
+    experiment = Experiment(project_name="tokaido_segmentation", api_key="Bm8mJ7xbMDa77te70th8PNcT8", disabled=not cfg.comet)
+    experiment.log_parameters(hyperparams)
 
     x_dir = os.path.join(cfg.data_path, 'img_syn_raw', 'train')
     y_dir = os.path.join(cfg.data_path, 'synthetic', 'train', 'labcmp')
@@ -105,22 +111,24 @@ def train(cfg):
     # train model for 1 epochs
 
     max_score = 0
+    with experiment.train():
+        for i in range(0, 40):
 
-    for i in range(0, 40):
+            print('\nEpoch: {}'.format(i))
+            train_logs = train_epoch.run(train_loader)
+            valid_logs = valid_epoch.run(valid_loader)
 
-        print('\nEpoch: {}'.format(i))
-        train_logs = train_epoch.run(train_loader)
-        valid_logs = valid_epoch.run(valid_loader)
+            experiment.log_metric("iou_score", valid_logs['iou_score'], step=i)
 
-        # do something (save model, change lr, etc.)
-        if max_score < valid_logs['iou_score']:
-            max_score = valid_logs['iou_score']
-            torch.save(model, './best_model.pth')
-            print('Model saved!')
+            # do something (save model, change lr, etc.)
+            if max_score < valid_logs['iou_score']:
+                max_score = valid_logs['iou_score']
+                torch.save(model, './best_model.pth')
+                print('Model saved!')
 
-        if i == 25:
-            optimizer.param_groups[0]['lr'] = 1e-5
-            print('Decrease decoder learning rate to 1e-5!')
+            if i == 25:
+                optimizer.param_groups[0]['lr'] = 1e-5
+                print('Decrease decoder learning rate to 1e-5!')
 
     return 0
 
@@ -143,6 +151,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch-size', type=int, default=8)
     parser.add_argument('--num-workers', type=int, default=8)
     parser.add_argument('--learning-rate', type=float, default=1e-4)
+    parser.add_argument('--comet', action='store_true')
 
     # Machine parameters
     args = parser.parse_args()
