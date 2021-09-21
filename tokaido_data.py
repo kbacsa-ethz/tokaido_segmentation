@@ -65,9 +65,6 @@ class Dataset(BaseDataset):
         image = image[::3, ::3, :]
         mask = cv2.imread(self.masks_fps[i], 0)
 
-        #if mask is None:
-        #   mask = np.zeros((360, 640), dtype=np.uint8)
-
         # extract certain classes from mask (e.g. cars)
         masks = [(mask == v) for v in self.class_values]
         mask = np.stack(masks, axis=-1).astype('float')
@@ -89,8 +86,6 @@ class Dataset(BaseDataset):
 
 
 if __name__ == "__main__":
-    # Lets look at data we have
-
     x_dir = os.path.join('/home/kb/Documents/data/Tokaido_dataset', 'img_syn_raw', 'train')
     y_dir = os.path.join('/home/kb/Documents/data/Tokaido_dataset', 'synthetic', 'train', 'labcmp')
 

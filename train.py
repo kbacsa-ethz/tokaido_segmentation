@@ -9,6 +9,7 @@ import numpy as np
 from skimage import color
 import segmentation_models_pytorch as smp
 from tokaido_data import Dataset
+from lmdb_data import TokaidoLMDB
 from torch.utils.data import DataLoader
 from data_aug import get_training_augmentation, get_validation_augmentation, get_preprocessing
 
@@ -32,18 +33,23 @@ def train(cfg):
     np.random.shuffle(sequences)
     training, validation = sequences[:int(.8 * len(sequences))], sequences[int(.8 * len(sequences)):]
 
-    train_files, train_masks, valid_files, valid_masks = [], [], [], []
+    train_files, train_masks, train_keys, valid_files, valid_masks, val_keys, = [], [], [], [], [], []
 
     for img_file in os.listdir(x_dir):
         mask_name = img_file.replace('_Scene.png', '.bmp')
         if os.path.isfile(os.path.join(y_dir, mask_name)):
             case = int(re.sub("[^0-9]", "", img_file.split('_')[1]))
+            frame = int(re.sub("[^0-9]", "", img_file.split('_')[2]))
+            key = key = ((1 << case) << 16) + (1 << frame)
+
             if case in training:
                 train_files.append(img_file)
                 train_masks.append(mask_name)
+                train_keys.append(key)
             if case in validation:
                 valid_files.append(img_file)
                 valid_masks.append(mask_name)
+                val_keys.append(key)
 
     classes = ["slab", "beam", "column", "nonstructural components", "rail", "sleeper"]
 
@@ -56,25 +62,43 @@ def train(cfg):
 
     preprocessing_fn = smp.encoders.get_preprocessing_fn(cfg.backbone, cfg.pretrained)
 
-    train_dataset = Dataset(
-        x_dir,
-        y_dir,
-        train_files,
-        train_masks,
-        augmentation=get_training_augmentation(),
-        preprocessing=get_preprocessing(preprocessing_fn),
-        classes=classes,
-    )
+    if not cfg.lmdb:
+        train_dataset = Dataset(
+            x_dir,
+            y_dir,
+            train_files,
+            train_masks,
+            augmentation=get_training_augmentation(),
+            preprocessing=get_preprocessing(preprocessing_fn),
+            classes=classes,
+        )
 
-    valid_dataset = Dataset(
-        x_dir,
-        y_dir,
-        valid_files,
-        valid_masks,
-        augmentation=get_validation_augmentation(),
-        preprocessing=get_preprocessing(preprocessing_fn),
-        classes=classes,
-    )
+        valid_dataset = Dataset(
+            x_dir,
+            y_dir,
+            valid_files,
+            valid_masks,
+            augmentation=get_validation_augmentation(),
+            preprocessing=get_preprocessing(preprocessing_fn),
+            classes=classes,
+        )
+
+    else:
+        train_dataset = TokaidoLMDB(
+            db_path=os.path.join(cfg.data_path, 'tokaido_lmdb'),
+            keys=train_keys,
+            classes=classes,
+            augmentation=get_training_augmentation(),
+            preprocessing=get_preprocessing(preprocessing_fn)
+        )
+
+        valid_dataset = TokaidoLMDB(
+            db_path=os.path.join(cfg.data_path, 'tokaido_lmdb'),
+            keys=val_keys,
+            classes=classes,
+            augmentation=get_training_augmentation(),
+            preprocessing=get_preprocessing(preprocessing_fn)
+        )
 
     visual_dataset = torch.utils.data.Subset(valid_dataset, list(range(5)))
 
@@ -187,6 +211,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch-size', type=int, default=8)
     parser.add_argument('--num-workers', type=int, default=8)
     parser.add_argument('--learning-rate', type=float, default=1e-4)
+    parser.add_argument('--lmdb', action='store_true')
     parser.add_argument('--comet', action='store_true')
 
     # Machine parameters
