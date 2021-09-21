@@ -91,14 +91,27 @@ class Dataset(BaseDataset):
 if __name__ == "__main__":
     # Lets look at data we have
 
-    dataset = Dataset("/home/kb/Documents/data/Tokaido_dataset/img_syn_raw/train",
-                      "/home/kb/Documents/data/Tokaido_dataset/synthetic/train/labcmp",
-                      ["slab", "beam", "column", "nonstructural components", "rail", "sleeper"],
-                      augmentation=data_aug.get_training_augmentation())
+    x_dir = os.path.join('/home/kb/Documents/data/Tokaido_dataset', 'img_syn_raw', 'train')
+    y_dir = os.path.join('/home/kb/Documents/data/Tokaido_dataset', 'synthetic', 'train', 'labcmp')
 
-    img, msk = dataset[1]  # get some sample
-    visualize(
-        image=img,
-        mask=msk[..., 5].squeeze(),
-    )
-    print("ok")
+    classes = ["slab", "beam", "column", "nonstructural components", "rail", "sleeper"]
+
+    dataset = Dataset(x_dir,
+                      y_dir,
+                      os.listdir(x_dir),
+                      os.listdir(y_dir),
+                      classes,
+                      augmentation=data_aug.get_validation_augmentation())
+
+    img, msk = dataset[8]  # get some sample
+
+    msk = np.argmax(msk, axis=-1)
+
+    from skimage import color
+    plt.subplot(1, 2, 1)
+    plt.imshow(img)
+
+    plt.subplot(1, 2, 2)
+    plt.imshow(color.label2rgb(msk, img))
+    plt.show()
+

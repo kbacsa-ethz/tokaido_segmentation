@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from comet_ml import Experiment
 
 import os
@@ -5,6 +6,7 @@ import argparse
 import re
 import torch
 import numpy as np
+from skimage import color
 import segmentation_models_pytorch as smp
 from tokaido_data import Dataset
 from torch.utils.data import DataLoader
@@ -74,6 +76,8 @@ def train(cfg):
         classes=classes,
     )
 
+    visual_dataset = torch.utils.data.Subset(valid_dataset, list(range(5)))
+
     train_loader = DataLoader(train_dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.num_workers)
     valid_loader = DataLoader(valid_dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.num_workers)
 
@@ -112,13 +116,45 @@ def train(cfg):
 
     max_score = 0
     with experiment.train():
-        for i in range(0, 40):
+        for epoch in range(0, 40):
 
-            print('\nEpoch: {}'.format(i))
+            print('\nEpoch: {}'.format(epoch))
             train_logs = train_epoch.run(train_loader)
             valid_logs = valid_epoch.run(valid_loader)
 
-            experiment.log_metric("iou_score", valid_logs['iou_score'], step=i)
+            experiment.log_metric("iou_score", valid_logs['iou_score'], step=epoch)
+
+            for img_idx in range(5):
+                # inference
+                image, gt_mask = visual_dataset[img_idx]
+                gt_mask = gt_mask.squeeze()
+                x_tensor = torch.from_numpy(image).to(cfg.device).unsqueeze(0)
+                pr_mask = model.predict(x_tensor)
+                pr_mask = (pr_mask.squeeze().cpu().numpy().round())
+
+                # adapt for plot
+                image = np.moveaxis(image, 0, -1)
+                gt_mask = np.moveaxis(gt_mask, 0, -1)
+                pr_mask = np.moveaxis(pr_mask, 0, -1)
+                gt_mask = np.argmax(gt_mask, axis=-1)
+                pr_mask = np.argmax(pr_mask, axis=-1)
+
+                fig = plt.figure()
+                plt.tight_layout()
+                ax1 = fig.add_subplot(131)
+                ax2 = fig.add_subplot(132)
+                ax3 = fig.add_subplot(133)
+                ax1.title.set_text('Image')
+                ax2.title.set_text('Model segmentation')
+                ax3.title.set_text('Ground truth')
+
+                ax1.imshow(image)
+                ax2.imshow(color.label2rgb(pr_mask, np.ones_like(image)))
+                ax3.imshow(color.label2rgb(gt_mask, np.ones_like(image)))
+
+                experiment.log_figure(figure=fig, figure_name="image_{}_epoch_{}".format(img_idx, epoch))
+
+                #plt.show()
 
             # do something (save model, change lr, etc.)
             if max_score < valid_logs['iou_score']:
@@ -126,7 +162,7 @@ def train(cfg):
                 torch.save(model, './best_model.pth')
                 print('Model saved!')
 
-            if i == 25:
+            if epoch == 25:
                 optimizer.param_groups[0]['lr'] = 1e-5
                 print('Decrease decoder learning rate to 1e-5!')
 
