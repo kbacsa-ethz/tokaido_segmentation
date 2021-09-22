@@ -108,12 +108,11 @@ def train(cfg):
             db_path=os.path.join(cfg.data_path, 'tokaido_lmdb'),
             keys=val_keys,
             classes=classes,
-            augmentation=get_training_augmentation(),
+            augmentation=get_validation_augmentation(),
             preprocessing=get_preprocessing(preprocessing_fn)
         )
 
     visual_dataset = torch.utils.data.Subset(valid_dataset, list(range(10)))
-
     train_loader = DataLoader(train_dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.num_workers)
     valid_loader = DataLoader(valid_dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.num_workers)
 
