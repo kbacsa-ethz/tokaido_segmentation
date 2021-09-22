@@ -54,7 +54,8 @@ def train(cfg):
 
     classes = ["nonbridge", "slab", "beam", "column", "nonstructural", "rail", "sleeper"]
 
-    model = smp.Unet(
+    model = smp.create_model(
+        arch=cfg.arch,
         encoder_name=cfg.backbone,
         encoder_weights=cfg.pretrained,
         classes=len(classes),
@@ -220,6 +221,7 @@ if __name__ == "__main__":
     parser.add_argument('--data-path', type=str, default='/home/kb/Documents/data/Tokaido_dataset')
 
     # Model parameters
+    parser.add_argument('--arch', type=str, default='Unet')
     parser.add_argument('--backbone', type=str, default='efficientnet-b0')
     parser.add_argument('--pretrained', type=str, default='imagenet')
     parser.add_argument('--activation', type=str, default='sigmoid')
