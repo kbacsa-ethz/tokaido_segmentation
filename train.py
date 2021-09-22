@@ -1,12 +1,14 @@
-import matplotlib.pyplot as plt
 from comet_ml import Experiment
 
 import os
 import argparse
+from datetime import datetime
+from pathlib import Path
+import json
 import re
 import torch
 import numpy as np
-from skimage import color
+import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import segmentation_models_pytorch as smp
 from tokaido_data import Dataset
@@ -20,6 +22,14 @@ def train(cfg):
     hyperparams = vars(cfg)
     experiment = Experiment(project_name="tokaido_segmentation", api_key="Bm8mJ7xbMDa77te70th8PNcT8", disabled=not cfg.comet)
     experiment.log_parameters(hyperparams)
+
+    # create experiment directory and save config
+    now = datetime.now()
+    dt_string = now.strftime("%d-%m-%Y_%H-%M-%S")
+    save_path = os.path.join(cfg.root_path, 'runs', dt_string)
+    Path(save_path).mkdir(parents=True, exist_ok=True)
+    with open(os.path.join(save_path, 'config.txt'), 'w') as f:
+        json.dump(cfg.__dict__, f, indent=2)
 
     x_dir = os.path.join(cfg.data_path, 'img_syn_raw', 'train')
     y_dir = os.path.join(cfg.data_path, 'synthetic', 'train', 'labcmp')
@@ -203,7 +213,7 @@ def train(cfg):
             # do something (save model, change lr, etc.)
             if max_score < valid_logs['iou_score']:
                 max_score = valid_logs['iou_score']
-                torch.save(model, './best_model.pth')
+                torch.save(model, os.path.join(save_path, 'best_model.pth'))
                 print('Model saved!')
 
             if epoch == 25:

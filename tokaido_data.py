@@ -2,6 +2,7 @@ import cv2
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from torch.utils.data import Dataset as BaseDataset
 import data_aug
 
@@ -101,8 +102,6 @@ if __name__ == "__main__":
 
     msk = np.argmax(msk, axis=-1)
 
-    from skimage import color
-    import matplotlib.patches as mpatches
     plt.subplot(1, 2, 1)
     plt.imshow(img)
     plt.subplot(1, 2, 2)
