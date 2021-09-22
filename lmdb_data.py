@@ -9,8 +9,7 @@ import data_aug
 
 
 class TokaidoLMDB(BaseDataset):
-    # TODO this is not the right order
-    CLASSES = ["slab", "beam", "column", "nonstructural components", "rail", "sleeper"]
+    CLASSES = ["nonbridge", "slab", "beam", "column", "nonstructural", "rail", "sleeper"]
 
     def __init__(self, db_path, keys=None, classes=None, augmentation=None, preprocessing=None):
         self.db_path = db_path
@@ -137,7 +136,7 @@ if __name__ == "__main__":
 
     folder2lmdb(data_path, x_dir, y_dir, lmdb_name)
 
-    classes = ["slab", "beam", "column", "nonstructural components", "rail", "sleeper"]
+    classes = ["nonbridge", "slab", "beam", "column", "nonstructural", "rail", "sleeper"]
 
     ks = []
     for img_file in os.listdir(x_dir):

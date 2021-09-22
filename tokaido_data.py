@@ -34,8 +34,7 @@ class Dataset(BaseDataset):
 
     """
 
-    # TODO this is not the right order
-    CLASSES = ["slab", "beam", "column", "nonstructural components", "rail", "sleeper"]
+    CLASSES = ["nonbridge", "slab", "beam", "column", "nonstructural", "rail", "sleeper"]
 
     def __init__(
             self,
@@ -89,7 +88,7 @@ if __name__ == "__main__":
     x_dir = os.path.join('/home/kb/Documents/data/Tokaido_dataset', 'img_syn_raw', 'train')
     y_dir = os.path.join('/home/kb/Documents/data/Tokaido_dataset', 'synthetic', 'train', 'labcmp')
 
-    classes = ["slab", "beam", "column", "nonstructural components", "rail", "sleeper"]
+    classes = ["nonbridge", "slab", "beam", "column", "nonstructural", "rail", "sleeper"]
 
     dataset = Dataset(x_dir,
                       y_dir,
@@ -103,10 +102,28 @@ if __name__ == "__main__":
     msk = np.argmax(msk, axis=-1)
 
     from skimage import color
+    import matplotlib.patches as mpatches
     plt.subplot(1, 2, 1)
     plt.imshow(img)
-
     plt.subplot(1, 2, 2)
-    plt.imshow(color.label2rgb(msk, img))
+
+    values = list(range(5))
+    t = 1
+    cmap = {
+        1: [1.0, 0.0, 0.0, t],
+        2: [0.7, 0.3, 0.1, t],
+        3: [1.0, 0.6, 0.2, t],
+        4: [0.0, 1.0, 0.0, t],
+        5: [0.1, 0.7, 0.3, t],
+        6: [0.2, 1.0, 0.6, t],
+        7: [0.0, 0.0, 1.0, t],
+    }
+
+    labels = {idx+1: class_name for idx, class_name in enumerate(classes)}
+    arrayShow = np.array([[cmap[i] for i in j] for j in msk])
+    ## create patches as legend
+    patches = [mpatches.Patch(color=cmap[i], label=labels[i]) for i in cmap]
+    plt.imshow(arrayShow)
+    plt.legend(handles=patches, loc=4, borderaxespad=0.)
     plt.show()
 

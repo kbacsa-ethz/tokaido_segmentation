@@ -7,6 +7,7 @@ import re
 import torch
 import numpy as np
 from skimage import color
+import matplotlib.patches as mpatches
 import segmentation_models_pytorch as smp
 from tokaido_data import Dataset
 from lmdb_data import TokaidoLMDB
@@ -51,7 +52,7 @@ def train(cfg):
                 valid_masks.append(mask_name)
                 val_keys.append(key)
 
-    classes = ["slab", "beam", "column", "nonstructural components", "rail", "sleeper"]
+    classes = ["nonbridge", "slab", "beam", "column", "nonstructural", "rail", "sleeper"]
 
     model = smp.Unet(
         encoder_name=cfg.backbone,
@@ -100,7 +101,7 @@ def train(cfg):
             preprocessing=get_preprocessing(preprocessing_fn)
         )
 
-    visual_dataset = torch.utils.data.Subset(valid_dataset, list(range(5)))
+    visual_dataset = torch.utils.data.Subset(valid_dataset, list(range(10)))
 
     train_loader = DataLoader(train_dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.num_workers)
     valid_loader = DataLoader(valid_dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.num_workers)
@@ -136,7 +137,19 @@ def train(cfg):
         verbose=True,
     )
 
-    # train model for 1 epochs
+    # plot parameters
+    t = 1
+    cmap = {
+        0: [1.0, 0.0, 0.0, t],
+        1: [0.7, 0.3, 0.1, t],
+        2: [1.0, 0.6, 0.2, t],
+        3: [0.0, 1.0, 0.0, t],
+        4: [0.1, 0.7, 0.3, t],
+        5: [0.2, 1.0, 0.6, t],
+        6: [0.0, 0.0, 1.0, t],
+    }
+
+    labels = {idx: class_name for idx, class_name in enumerate(classes)}
 
     max_score = 0
     with experiment.train():
@@ -148,7 +161,7 @@ def train(cfg):
 
             experiment.log_metric("iou_score", valid_logs['iou_score'], step=epoch)
 
-            for img_idx in range(5):
+            for img_idx in range(10):
                 # inference
                 image, gt_mask = visual_dataset[img_idx]
                 gt_mask = gt_mask.squeeze()
@@ -163,7 +176,7 @@ def train(cfg):
                 gt_mask = np.argmax(gt_mask, axis=-1)
                 pr_mask = np.argmax(pr_mask, axis=-1)
 
-                fig = plt.figure()
+                fig = plt.figure(figsize=(20, 10))
                 plt.tight_layout()
                 ax1 = fig.add_subplot(131)
                 ax2 = fig.add_subplot(132)
@@ -173,12 +186,18 @@ def train(cfg):
                 ax3.title.set_text('Ground truth')
 
                 ax1.imshow(image)
-                ax2.imshow(color.label2rgb(pr_mask, np.ones_like(image)))
-                ax3.imshow(color.label2rgb(gt_mask, np.ones_like(image)))
+
+                array_show = np.array([[cmap[i] for i in j] for j in pr_mask])
+                patches = [mpatches.Patch(color=cmap[i], label=labels[i]) for i in cmap]
+                ax2.imshow(array_show)
+                ax2.legend(handles=patches, loc=4, borderaxespad=0.)
+
+                array_show = np.array([[cmap[i] for i in j] for j in gt_mask])
+                patches = [mpatches.Patch(color=cmap[i], label=labels[i]) for i in cmap]
+                ax3.imshow(array_show)
+                ax3.legend(handles=patches, loc=4, borderaxespad=0.)
 
                 experiment.log_figure(figure=fig, figure_name="image_{}_epoch_{}".format(img_idx, epoch))
-
-                #plt.show()
 
             # do something (save model, change lr, etc.)
             if max_score < valid_logs['iou_score']:
@@ -189,7 +208,6 @@ def train(cfg):
             if epoch == 25:
                 optimizer.param_groups[0]['lr'] = 1e-5
                 print('Decrease decoder learning rate to 1e-5!')
-
     return 0
 
 
