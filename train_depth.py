@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import segmentation_models_pytorch as smp
 from tokaido_depth import Dataset
-from lmdb_data import TokaidoLMDB
+from lmdb_data_depth import TokaidoLMDBDepth
 from torch.utils.data import DataLoader
 from data_aug import get_training_augmentation, get_validation_augmentation, get_preprocessing
 
@@ -104,16 +104,16 @@ def train(cfg):
         )
 
     else:
-        train_dataset = TokaidoLMDB(
-            db_path=os.path.join(cfg.data_path, 'tokaido_lmdb'),
+        train_dataset = TokaidoLMDBDepth(
+            db_path=os.path.join(cfg.data_path, 'tokaido_depth_lmdb'),
             keys=train_keys,
             classes=classes,
             augmentation=get_training_augmentation(),
             preprocessing=get_preprocessing(preprocessing_fn)
         )
 
-        valid_dataset = TokaidoLMDB(
-            db_path=os.path.join(cfg.data_path, 'tokaido_lmdb'),
+        valid_dataset = TokaidoLMDBDepth(
+            db_path=os.path.join(cfg.data_path, 'tokaido_depth_lmdb'),
             keys=val_keys,
             classes=classes,
             augmentation=get_validation_augmentation(),
