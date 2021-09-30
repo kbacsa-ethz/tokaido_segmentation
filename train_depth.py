@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import segmentation_models_pytorch as smp
-from tokaido_data import Dataset
+from tokaido_depth import Dataset
 from lmdb_data import TokaidoLMDB
 from torch.utils.data import DataLoader
 from data_aug import get_training_augmentation, get_validation_augmentation, get_preprocessing
@@ -33,6 +33,7 @@ def train(cfg):
 
     x_dir = os.path.join(cfg.data_path, 'img_syn_raw', 'train')
     y_dir = os.path.join(cfg.data_path, 'synthetic', 'train', 'labcmp')
+    z_dir = os.path.join(cfg.data_path, 'synthetic', 'train', 'depth')
 
     files = os.listdir(x_dir)
     cases = np.zeros(len(files), dtype=int)
@@ -44,11 +45,12 @@ def train(cfg):
     np.random.shuffle(sequences)
     training, validation = sequences[:int(.8 * len(sequences))], sequences[int(.8 * len(sequences)):]
 
-    train_files, train_masks, train_keys, valid_files, valid_masks, val_keys, = [], [], [], [], [], []
+    train_files, train_masks, train_depths, train_keys, valid_files, valid_masks, valid_depths, val_keys, = [], [], [], [], [], [], [], []
 
     for img_file in os.listdir(x_dir):
         mask_name = img_file.replace('_Scene.png', '.bmp')
-        if os.path.isfile(os.path.join(y_dir, mask_name)):
+        depth_name = img_file.replace('_Scene.png', '.png')
+        if os.path.isfile(os.path.join(y_dir, mask_name)) and os.path.isfile(os.path.join(z_dir, depth_name)):
             case = int(re.sub("[^0-9]", "", img_file.split('_')[1]))
             frame = int(re.sub("[^0-9]", "", img_file.split('_')[2]))
             key = key = ((1 << case) << 16) + (1 << frame)
@@ -56,10 +58,12 @@ def train(cfg):
             if case in training:
                 train_files.append(img_file)
                 train_masks.append(mask_name)
+                train_depths.append(depth_name)
                 train_keys.append(key)
             if case in validation:
                 valid_files.append(img_file)
                 valid_masks.append(mask_name)
+                valid_depths.append(depth_name)
                 val_keys.append(key)
 
     classes = ["nonbridge", "slab", "beam", "column", "nonstructural", "rail", "sleeper"]
@@ -68,7 +72,7 @@ def train(cfg):
         arch=cfg.arch,
         encoder_name=cfg.backbone,
         encoder_weights=cfg.pretrained,
-        classes=len(classes),
+        classes=len(classes)+1,
         activation=cfg.activation
     )
 
@@ -78,8 +82,10 @@ def train(cfg):
         train_dataset = Dataset(
             x_dir,
             y_dir,
+            z_dir,
             train_files,
             train_masks,
+            train_depths,
             augmentation=get_training_augmentation(),
             preprocessing=get_preprocessing(preprocessing_fn),
             classes=classes,
@@ -88,8 +94,10 @@ def train(cfg):
         valid_dataset = Dataset(
             x_dir,
             y_dir,
+            z_dir,
             valid_files,
             valid_masks,
+            valid_depths,
             augmentation=get_validation_augmentation(),
             preprocessing=get_preprocessing(preprocessing_fn),
             classes=classes,
@@ -175,25 +183,35 @@ def train(cfg):
                 # inference
                 image, gt_mask = visual_dataset[img_idx]
                 gt_mask = gt_mask.squeeze()
+                gt_depth = gt_mask[-1]
+                gt_mask = gt_mask[:len(classes)]
                 x_tensor = torch.from_numpy(image).to(cfg.device).unsqueeze(0)
                 pr_mask = model.predict(x_tensor)
-                pr_mask = (pr_mask.squeeze().cpu().numpy().round())
+                pr_mask = pr_mask.squeeze()
+                pr_mask, pr_depth = torch.split(pr_mask, [7, 1], dim=0)
+                pr_mask = pr_mask.cpu().numpy().round()
+                pr_depth = pr_depth.cpu().numpy()
 
                 # adapt for plot
                 image = np.moveaxis(image, 0, -1)
                 gt_mask = np.moveaxis(gt_mask, 0, -1)
                 pr_mask = np.moveaxis(pr_mask, 0, -1)
+                pr_depth = np.moveaxis(pr_depth, 0, -1)
                 gt_mask = np.argmax(gt_mask, axis=-1)
                 pr_mask = np.argmax(pr_mask, axis=-1)
 
                 fig = plt.figure(figsize=(20, 10))
                 plt.tight_layout()
-                ax1 = fig.add_subplot(131)
-                ax2 = fig.add_subplot(132)
-                ax3 = fig.add_subplot(133)
+                ax1 = fig.add_subplot(231)
+                ax2 = fig.add_subplot(232)
+                ax3 = fig.add_subplot(233)
+                ax4 = fig.add_subplot(234)
+                ax5 = fig.add_subplot(235)
                 ax1.title.set_text('Image')
                 ax2.title.set_text('Model segmentation')
                 ax3.title.set_text('Ground truth')
+                ax4.title.set_text('Predicted depth')
+                ax5.title.set_text('True depth')
 
                 ax1.imshow(image)
 
@@ -206,6 +224,9 @@ def train(cfg):
                 patches = [mpatches.Patch(color=cmap[i], label=labels[i]) for i in cmap]
                 ax3.imshow(array_show)
                 ax3.legend(handles=patches, loc=4, borderaxespad=0.)
+
+                ax4.imshow(pr_depth)
+                ax5.imshow(gt_depth)
 
                 experiment.log_figure(figure=fig, figure_name="image_{}_epoch_{}".format(img_idx, epoch))
 
@@ -230,7 +251,7 @@ if __name__ == "__main__":
     parser.add_argument('--data-path', type=str, default='/home/kb/Documents/data/Tokaido_dataset')
 
     # Model parameters
-    parser.add_argument('--arch', type=str, default='PAN')
+    parser.add_argument('--arch', type=str, default='pan')
     parser.add_argument('--backbone', type=str, default='mobilenet_v2')
     parser.add_argument('--pretrained', type=str, default='imagenet')
     parser.add_argument('--activation', type=str, default='sigmoid')
@@ -238,7 +259,7 @@ if __name__ == "__main__":
 
     # Training parameters
     parser.add_argument('--batch-size', type=int, default=2)
-    parser.add_argument('--num-workers', type=int, default=8)
+    parser.add_argument('--num-workers', type=int, default=2)
     parser.add_argument('--learning-rate', type=float, default=1e-4)
     parser.add_argument('--lmdb', action='store_true')
     parser.add_argument('--comet', action='store_true')
