@@ -230,14 +230,14 @@ if __name__ == "__main__":
     parser.add_argument('--data-path', type=str, default='/home/kb/Documents/data/Tokaido_dataset')
 
     # Model parameters
-    parser.add_argument('--arch', type=str, default='Unet')
-    parser.add_argument('--backbone', type=str, default='efficientnet-b0')
+    parser.add_argument('--arch', type=str, default='PAN')
+    parser.add_argument('--backbone', type=str, default='mobilenet_v2')
     parser.add_argument('--pretrained', type=str, default='imagenet')
     parser.add_argument('--activation', type=str, default='sigmoid')
     parser.add_argument('--device', type=str, default='cpu')
 
     # Training parameters
-    parser.add_argument('--batch-size', type=int, default=8)
+    parser.add_argument('--batch-size', type=int, default=2)
     parser.add_argument('--num-workers', type=int, default=8)
     parser.add_argument('--learning-rate', type=float, default=1e-4)
     parser.add_argument('--lmdb', action='store_true')
