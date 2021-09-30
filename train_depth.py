@@ -72,7 +72,7 @@ def train(cfg):
         arch=cfg.arch,
         encoder_name=cfg.backbone,
         encoder_weights=cfg.pretrained,
-        classes=len(classes),
+        classes=len(classes)+1,
         activation=cfg.activation
     )
 
@@ -183,25 +183,35 @@ def train(cfg):
                 # inference
                 image, gt_mask = visual_dataset[img_idx]
                 gt_mask = gt_mask.squeeze()
+                gt_depth = gt_mask[-1]
+                gt_mask = gt_mask[:len(classes)]
                 x_tensor = torch.from_numpy(image).to(cfg.device).unsqueeze(0)
                 pr_mask = model.predict(x_tensor)
-                pr_mask = (pr_mask.squeeze().cpu().numpy().round())
+                pr_mask = pr_mask.squeeze()
+                pr_mask, pr_depth = torch.split(pr_mask, [7, 1], dim=0)
+                pr_mask = pr_mask.cpu().numpy().round()
+                pr_depth = pr_depth.cpu().numpy()
 
                 # adapt for plot
                 image = np.moveaxis(image, 0, -1)
                 gt_mask = np.moveaxis(gt_mask, 0, -1)
                 pr_mask = np.moveaxis(pr_mask, 0, -1)
+                pr_depth = np.moveaxis(pr_depth, 0, -1)
                 gt_mask = np.argmax(gt_mask, axis=-1)
                 pr_mask = np.argmax(pr_mask, axis=-1)
 
                 fig = plt.figure(figsize=(20, 10))
                 plt.tight_layout()
-                ax1 = fig.add_subplot(131)
-                ax2 = fig.add_subplot(132)
-                ax3 = fig.add_subplot(133)
+                ax1 = fig.add_subplot(231)
+                ax2 = fig.add_subplot(232)
+                ax3 = fig.add_subplot(233)
+                ax4 = fig.add_subplot(234)
+                ax5 = fig.add_subplot(235)
                 ax1.title.set_text('Image')
                 ax2.title.set_text('Model segmentation')
                 ax3.title.set_text('Ground truth')
+                ax4.title.set_text('Predicted depth')
+                ax5.title.set_text('True depth')
 
                 ax1.imshow(image)
 
@@ -214,6 +224,9 @@ def train(cfg):
                 patches = [mpatches.Patch(color=cmap[i], label=labels[i]) for i in cmap]
                 ax3.imshow(array_show)
                 ax3.legend(handles=patches, loc=4, borderaxespad=0.)
+
+                ax4.imshow(pr_depth)
+                ax5.imshow(gt_depth)
 
                 experiment.log_figure(figure=fig, figure_name="image_{}_epoch_{}".format(img_idx, epoch))
 
@@ -238,15 +251,15 @@ if __name__ == "__main__":
     parser.add_argument('--data-path', type=str, default='/home/kb/Documents/data/Tokaido_dataset')
 
     # Model parameters
-    parser.add_argument('--arch', type=str, default='Unet')
-    parser.add_argument('--backbone', type=str, default='efficientnet-b0')
+    parser.add_argument('--arch', type=str, default='pan')
+    parser.add_argument('--backbone', type=str, default='mobilenet_v2')
     parser.add_argument('--pretrained', type=str, default='imagenet')
     parser.add_argument('--activation', type=str, default='sigmoid')
     parser.add_argument('--device', type=str, default='cpu')
 
     # Training parameters
-    parser.add_argument('--batch-size', type=int, default=8)
-    parser.add_argument('--num-workers', type=int, default=8)
+    parser.add_argument('--batch-size', type=int, default=2)
+    parser.add_argument('--num-workers', type=int, default=2)
     parser.add_argument('--learning-rate', type=float, default=1e-4)
     parser.add_argument('--lmdb', action='store_true')
     parser.add_argument('--comet', action='store_true')

@@ -69,23 +69,24 @@ class Dataset(BaseDataset):
         image = image[::3, ::3, :]
         mask = cv2.imread(self.masks_fps[i], 0)
         depth = cv2.imread(self.depth_fps[i], 0)
+        depth = np.float32(depth) / 255
 
         # extract certain classes from mask (e.g. cars)
         masks = [(mask == v) for v in self.class_values]
+        masks.append(depth)
         mask = np.stack(masks, axis=-1).astype('float')
 
         # apply augmentations
         if self.augmentation:
             sample = self.augmentation(image=image, mask=mask)
             image, mask = sample['image'], sample['mask']
-            depth = torch.from_numpy(np.float32(depth)) / 255
 
         # apply preprocessing
         if self.preprocessing:
             sample = self.preprocessing(image=image, mask=mask)
             image, mask = sample['image'], sample['mask']
 
-        return image, mask, depth
+        return image, mask
 
     def __len__(self):
         return len(self.images_fps)
