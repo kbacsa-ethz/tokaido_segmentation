@@ -1,1 +1,1 @@
-python train.py --root_path $PWD --data_path /app/data --device cuda
+python train.py --root-path $PWD --data-path /app/data --device cuda
