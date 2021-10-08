@@ -40,10 +40,11 @@ class TokaidoLMDBDepth(BaseDataset):
         # load label
         mask, depth = unpacked[1], unpacked[2]
 
+        depth = np.expand_dims(depth, axis=-1)
+        image = np.concatenate([image, depth], axis=-1)
+
         # extract certain classes from mask (e.g. cars)
         masks = [(mask == v) for v in self.class_values]
-        depth = np.float32(depth) / 255
-        masks.append(depth)
         mask = np.stack(masks, axis=-1).astype('float')
 
         # apply augmentations
