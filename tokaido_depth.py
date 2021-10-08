@@ -69,11 +69,11 @@ class Dataset(BaseDataset):
         image = image[::3, ::3, :]
         mask = cv2.imread(self.masks_fps[i], 0)
         depth = cv2.imread(self.depth_fps[i], 0)
-        depth = np.float32(depth) / 255
+        depth = np.expand_dims(depth, axis=-1)
+        image = np.concatenate([image, depth], axis=-1)
 
         # extract certain classes from mask (e.g. cars)
         masks = [(mask == v) for v in self.class_values]
-        masks.append(depth)
         mask = np.stack(masks, axis=-1).astype('float')
 
         # apply augmentations

@@ -2,7 +2,7 @@ import numpy as np
 
 
 def preprocess_input(
-    x, mean=None, std=None, input_space="RGB", input_range=None, **kwargs
+    x, mean=None, std=None, input_space=[0, 1], input_range=None, **kwargs
 ):
 
     if input_space == "BGR":

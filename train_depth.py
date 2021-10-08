@@ -71,8 +71,8 @@ def train(cfg):
     model = smp.create_model(
         arch=cfg.arch,
         encoder_name=cfg.backbone,
-        encoder_weights=cfg.pretrained,
-        classes=len(classes)+1,
+        encoder_weights=None,
+        classes=len(classes),
         activation=cfg.activation
     )
 
