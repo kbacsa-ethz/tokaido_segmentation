@@ -127,7 +127,14 @@ def train(cfg):
     # Dice/F1 score - https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient
     # IoU/Jaccard score - https://en.wikipedia.org/wiki/Jaccard_index
 
-    loss = smp.utils.losses.DiceLoss()
+    #loss = smp.utils.losses.DiceLoss()
+    #loss = smp.utils.losses.FocalLoss()
+
+    loss = smp.utils.base.SumOfLosses(
+        smp.utils.losses.DiceLoss(),
+        smp.utils.losses.FocalLoss()
+    )
+
     metrics = [
         smp.utils.metrics.IoU(threshold=0.5),
     ]
