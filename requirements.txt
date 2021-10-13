@@ -5,3 +5,4 @@ timm==0.4.12
 matplotlib
 comet_ml
 lmdb
+pyarrow
