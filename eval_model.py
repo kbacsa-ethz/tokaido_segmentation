@@ -17,7 +17,7 @@ from data_aug import get_training_augmentation, get_validation_augmentation, get
 
 def eval_model(cfg):
 
-    model_path = "./models/fpn_mobilenetv2.pth"
+    model_path = "./models/fpn_resnet50_focal.pth"
     model_name = Path(model_path).stem
 
     save_path = os.path.join(cfg.root_path, 'results', model_name)
@@ -60,7 +60,7 @@ def eval_model(cfg):
 
     classes = ["nonbridge", "slab", "beam", "column", "nonstructural", "rail", "sleeper"]
 
-    model = torch.load("./models/fpn_mobilenetv2.pth", map_location=torch.device('cpu'))
+    model = torch.load(model_path, map_location=torch.device('cpu'))
     model.eval()
 
     preprocessing_fn = smp.encoders.get_preprocessing_fn(cfg.backbone, cfg.pretrained)
@@ -107,10 +107,7 @@ def eval_model(cfg):
     labels = {idx: class_name for idx, class_name in enumerate(classes)}
 
     sample_num = 0
-
-    y_true = []
-    y_pred = []
-
+    confusion_array = np.zeros([7, 7])
     for image, gt_mask in tqdm(valid_loader):
         # inference
         gt_mask = gt_mask.squeeze()
@@ -132,8 +129,7 @@ def eval_model(cfg):
         gt_mask = np.argmax(gt_mask, axis=-1)
         pr_mask = np.argmax(pr_mask, axis=-1)
 
-        y_true.append(gt_mask.flatten())
-        y_pred.append(pr_mask.flatten())
+        confusion_array += confusion_matrix(gt_mask.flatten(), pr_mask.flatten(), labels=list(range(7)), normalize=None)
 
         fig = plt.figure(figsize=(20, 10))
         plt.tight_layout()
@@ -166,18 +162,10 @@ def eval_model(cfg):
         sample_num += 1
         #plt.show()
 
-    y_true = np.concatenate(y_true)
-    y_pred = np.concatenate(y_pred)
-
-    array = np.array(confusion_matrix(y_true, y_pred))
-    print(array)
-    print(array.sum(axis=1))
-    array = array / array.sum(axis=0)
-    print(array)
     import pandas as pd
     import seaborn as sn
 
-    df_cm = pd.DataFrame(array, range(array.shape[0]), range(array.shape[0]))
+    df_cm = pd.DataFrame(confusion_array, range(confusion_array.shape[0]), range(confusion_array.shape[0]))
     plt.figure(figsize=(10,7))
     sn.set(font_scale=1.4)  # for label size
     sn.heatmap(df_cm, annot=True, annot_kws={"size": 16})  # font size
@@ -197,7 +185,7 @@ if __name__ == "__main__":
 
     # Model parameters
     parser.add_argument('--device', type=str, default='cpu')
-    parser.add_argument('--backbone', type=str, default='mobilenet_v2')
+    parser.add_argument('--backbone', type=str, default='resnet50')
     parser.add_argument('--pretrained', type=str, default='imagenet')
 
     # Training parameters
