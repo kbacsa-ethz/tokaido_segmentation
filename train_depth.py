@@ -26,7 +26,7 @@ def train(cfg):
     # create experiment directory and save config
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%Y_%H-%M-%S")
-    save_path = os.path.join(cfg.root_path, 'runs', dt_string)
+    save_path = os.path.join(cfg.data_path, 'runs', dt_string)
     Path(save_path).mkdir(parents=True, exist_ok=True)
     with open(os.path.join(save_path, 'config.txt'), 'w') as f:
         json.dump(cfg.__dict__, f, indent=2)
@@ -121,8 +121,8 @@ def train(cfg):
         )
 
     visual_dataset = torch.utils.data.Subset(valid_dataset, list(range(10)))
-    train_loader = DataLoader(train_dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.num_workers)
-    valid_loader = DataLoader(valid_dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.num_workers)
+    train_loader = DataLoader(train_dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.num_workers, pin_memory=True if cfg.device == 'cuda' else False)
+    valid_loader = DataLoader(valid_dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.num_workers, pin_memory=True if cfg.device == 'cuda' else False)
 
     # Dice/F1 score - https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient
     # IoU/Jaccard score - https://en.wikipedia.org/wiki/Jaccard_index
