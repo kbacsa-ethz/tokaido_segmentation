@@ -95,6 +95,25 @@ class FocalLoss(base.Loss):
         return loss.mean()
 
 
+class MeanIOU(base.Loss):
+    """
+    Implementation from https://github.com/clcarwin/focal_loss_pytorch
+    """
+
+    def __init__(self, activation=None, ignore_channels=None, **kwargs):
+        super().__init__(**kwargs)
+
+        self.activation = Activation(activation)
+        self.ignore_channels = ignore_channels
+
+    def forward(self, y_pr, y_gt):
+        y_pr = self.activation(y_pr)
+        intersection = y_gt * y_pr
+        not_true = torch.ones_like(y_gt) - y_gt
+        union = y_gt + (not_true * y_pr)
+        return -torch.log(torch.sum(intersection)/torch.sum(union))
+
+
 class L1Loss(nn.L1Loss, base.Loss):
     pass
 
