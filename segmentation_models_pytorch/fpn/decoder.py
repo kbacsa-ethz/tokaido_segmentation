@@ -12,6 +12,7 @@ class Conv3x3GNReLU(nn.Module):
                 in_channels, out_channels, (3, 3), stride=1, padding=1, bias=False
             ),
             nn.GroupNorm(32, out_channels),
+            nn.Dropout2d(0.2, inplace=True),
             nn.ReLU(inplace=True),
         )
 

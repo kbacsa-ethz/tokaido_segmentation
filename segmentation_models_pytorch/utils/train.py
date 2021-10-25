@@ -111,3 +111,31 @@ class ValidEpoch(Epoch):
             prediction = self.model.forward(x)
             loss = self.loss(prediction, y)
         return loss, prediction
+
+
+class ValidEpochMonteCarlo(Epoch):
+
+    def __init__(self, model, loss, metrics, monte_carlo_it, device='cpu', verbose=True):
+        super().__init__(
+            model=model,
+            loss=loss,
+            metrics=metrics,
+            stage_name='valid',
+            device=device,
+            verbose=verbose,
+        )
+
+        self.monte_carlo_it = monte_carlo_it
+
+    def on_epoch_start(self):
+        self.model.train()
+
+    def batch_update(self, x, y):
+        with torch.no_grad():
+            predictions = torch.zeros_like(y).unsqueeze(-1)
+            predictions = predictions.expand(-1, -1, -1, -1, self.monte_carlo_it)
+            for i in range(self.monte_carlo_it):
+                predictions[..., i] = self.model.forward(x)
+            prediction = predictions.mean(dim=-1)
+            loss = self.loss(prediction, y)
+        return loss, prediction

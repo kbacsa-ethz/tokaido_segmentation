@@ -132,7 +132,7 @@ def train(cfg):
 
     # penalty weight per class
     gamma = 1.
-    alpha = [1.] * len(classes)
+    alpha = [1.] * (len(classes)+1)
     loss = smp.utils.base.SumOfLosses(
         smp.utils.losses.DiceLoss(),
         smp.utils.losses.FocalLoss(gamma=gamma, alpha=alpha)
@@ -157,10 +157,11 @@ def train(cfg):
         verbose=True,
     )
 
-    valid_epoch = smp.utils.train.ValidEpoch(
+    valid_epoch = smp.utils.train.ValidEpochMonteCarlo(
         model,
         loss=loss,
         metrics=metrics,
+        monte_carlo_it=cfg.monte_carlo,
         device=cfg.device,
         verbose=True,
     )
@@ -261,10 +262,11 @@ if __name__ == "__main__":
     parser.add_argument('--data-path', type=str, default='/home/kb/Documents/data/Tokaido_dataset')
 
     # Model parameters
-    parser.add_argument('--arch', type=str, default='pan')
+    parser.add_argument('--arch', type=str, default='fpn')
     parser.add_argument('--backbone', type=str, default='mobilenet_v2')
     parser.add_argument('--pretrained', type=str, default='imagenet')
     parser.add_argument('--activation', type=str, default='sigmoid')
+    parser.add_argument('--monte_carlo', type=int, default=50)
     parser.add_argument('--device', type=str, default='cpu')
 
     # Training parameters
