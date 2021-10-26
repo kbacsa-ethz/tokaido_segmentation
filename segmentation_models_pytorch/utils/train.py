@@ -1,5 +1,6 @@
 import sys
 import torch
+from torch.nn.modules import Dropout2d
 from tqdm import tqdm as tqdm
 from .meter import AverageValueMeter
 
@@ -132,25 +133,18 @@ class ValidEpochMonteCarlo(Epoch):
             if each_module.__class__.__name__.startswith('Dropout'):
                 each_module.train()
 
-    def check_dropout(self):
-        for each_module in self.model.modules():
-            if each_module.__class__.__name__.startswith('Dropout'):
-                print(each_module.training)
-
     def on_epoch_start(self):
         self.model.eval()
         self.enable_dropout()
 
     def batch_update(self, x, y):
         with torch.no_grad():
-            predictions = torch.zeros_like(y).unsqueeze(-1)
-            predictions = predictions.expand(-1, -1, -1, -1, self.monte_carlo_it)
+            preds = []
             for i in range(self.monte_carlo_it):
-                #self.check_dropout()
-                pred = self.model.forward(x)
-                predictions[..., i] = pred
+                pred = self.model(x)
+                preds.append(pred)
 
+            predictions = torch.stack(preds, dim=-1)
             prediction = predictions.mean(dim=-1)
-            #print(predictions.var(dim=-1))
             loss = self.loss(prediction, y)
         return loss, prediction
