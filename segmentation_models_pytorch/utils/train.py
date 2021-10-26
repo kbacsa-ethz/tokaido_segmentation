@@ -127,15 +127,30 @@ class ValidEpochMonteCarlo(Epoch):
 
         self.monte_carlo_it = monte_carlo_it
 
+    def enable_dropout(self):
+        for each_module in self.model.modules():
+            if each_module.__class__.__name__.startswith('Dropout'):
+                each_module.train()
+
+    def check_dropout(self):
+        for each_module in self.model.modules():
+            if each_module.__class__.__name__.startswith('Dropout'):
+                print(each_module.training)
+
     def on_epoch_start(self):
-        self.model.train()
+        self.model.eval()
+        self.enable_dropout()
 
     def batch_update(self, x, y):
         with torch.no_grad():
             predictions = torch.zeros_like(y).unsqueeze(-1)
             predictions = predictions.expand(-1, -1, -1, -1, self.monte_carlo_it)
             for i in range(self.monte_carlo_it):
-                predictions[..., i] = self.model.forward(x)
+                #self.check_dropout()
+                pred = self.model.forward(x)
+                predictions[..., i] = pred
+
             prediction = predictions.mean(dim=-1)
+            #print(predictions.var(dim=-1))
             loss = self.loss(prediction, y)
         return loss, prediction
