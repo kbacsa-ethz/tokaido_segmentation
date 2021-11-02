@@ -182,8 +182,7 @@ def train(cfg):
 
     max_score = 0
     with experiment.train():
-        for epoch in range(0, 40):
-
+        for epoch in range(0, cfg.n_epochs):
             print('\nEpoch: {}'.format(epoch))
             train_logs = train_epoch.run(train_loader)
             valid_logs = valid_epoch.run(valid_loader)
@@ -263,7 +262,7 @@ if __name__ == "__main__":
 
     # Model parameters
     parser.add_argument('--arch', type=str, default='fpn')
-    parser.add_argument('--backbone', type=str, default='mobilenet_v2')
+    parser.add_argument('--backbone', type=str, default='resnet18')
     parser.add_argument('--pretrained', type=str, default='imagenet')
     parser.add_argument('--activation', type=str, default='sigmoid')
     parser.add_argument('--monte_carlo', type=int, default=50)
@@ -272,6 +271,7 @@ if __name__ == "__main__":
     # Training parameters
     parser.add_argument('--batch-size', type=int, default=2)
     parser.add_argument('--num-workers', type=int, default=2)
+    parser.add_argument('--n-epochs', type=int, default=30)
     parser.add_argument('--learning-rate', type=float, default=1e-4)
     parser.add_argument('--lmdb', action='store_true')
     parser.add_argument('--comet', action='store_true')
