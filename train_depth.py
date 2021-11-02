@@ -15,9 +15,7 @@ from data_aug import get_training_augmentation, get_validation_augmentation, get
 
 
 def train(cfg):
-
     print("="*30 + "TRAINING" + "="*30)
-    hyperparams = vars(cfg)
 
     # create experiment directory and save config
     now = datetime.now()
@@ -169,8 +167,8 @@ def train(cfg):
     max_score = 0
     for epoch in range(0, cfg.n_epochs):
         print('\nEpoch: {}'.format(epoch))
-        train_logs = train_epoch.run(train_loader)
-        if epoch == 0 or epoch == (cfg.num_epochs-1) or cfg.val_in_loop:
+        #train_logs = train_epoch.run(train_loader)
+        if epoch == 0 or epoch == (cfg.n_epochs-1) or cfg.val_in_loop:
             valid_logs = valid_epoch.run(valid_loader)
 
         # do something (save model, change lr, etc.)
@@ -207,7 +205,7 @@ if __name__ == "__main__":
     parser.add_argument('--num-workers', type=int, default=2)
     parser.add_argument('--n-epochs', type=int, default=30)
     parser.add_argument('--learning-rate', type=float, default=1e-4)
-    parser.add_argument('--val_in_loop', action='store_true')
+    parser.add_argument('--val-in-loop', action='store_true')
     parser.add_argument('--lmdb', action='store_true')
     parser.add_argument('--comet', action='store_true')
 
