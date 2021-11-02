@@ -12,6 +12,7 @@ import segmentation_models_pytorch as smp
 from lmdb_data_depth_test import TokaidoLMDBDepth
 from torch.utils.data import DataLoader
 from data_aug import get_validation_augmentation, get_preprocessing
+from submission_helper import pred2kaggle
 
 
 def test_model(cfg):
@@ -109,7 +110,16 @@ def test_model(cfg):
         pr_mask = pr_mask.astype(np.uint8) + 1
 
         Image.fromarray(pr_mask).save(os.path.join(target_path, file_name[0]))
+        break
 
+    # component labels
+    csv_read = os.path.join(cfg.data_path, 'files_test.csv')
+    im_col = 0
+    lab_col = 1
+    select_col = 5
+    csv_write = os.path.join(cfg.data_path, 'component_submission_sample.csv')
+    labels = [2, 3, 4, 5, 6, 7]
+    pred2kaggle(target_path, csv_read, csv_write, im_col, lab_col, labels, select_col)
     return 0
 
 
