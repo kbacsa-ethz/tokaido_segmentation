@@ -15,7 +15,7 @@ class TokaidoLMDB(BaseDataset):
         self.db_path = db_path
 
         # convert str names to class values on masks
-        self.class_values = [self.CLASSES.index(cls.lower()) for cls in classes]
+        self.class_values = [self.CLASSES.index(cls.lower())+1 for cls in classes]
 
         self.env = lmdb.open(db_path, subdir=os.path.isdir(db_path),
                              readonly=True, lock=False,

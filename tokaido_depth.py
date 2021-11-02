@@ -56,7 +56,7 @@ class Dataset(BaseDataset):
         self.depth_fps = [os.path.join(depth_dir, image_id) for image_id in depth_files]
 
         # convert str names to class values on masks
-        self.class_values = [self.CLASSES.index(cls.lower()) for cls in classes]
+        self.class_values = [self.CLASSES.index(cls.lower())+1 for cls in classes]
 
         self.augmentation = augmentation
         self.preprocessing = preprocessing
