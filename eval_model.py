@@ -1,4 +1,5 @@
 import os
+import pickle
 import argparse
 import re
 from pathlib import Path
@@ -12,60 +13,63 @@ import segmentation_models_pytorch as smp
 from tokaido_depth import Dataset
 from lmdb_data_depth import TokaidoLMDBDepth
 from torch.utils.data import DataLoader
-from data_aug import get_training_augmentation, get_validation_augmentation, get_preprocessing
+from data_aug import get_validation_augmentation, get_preprocessing
 
 
 def eval_model(cfg):
-
-    model_path = "./models/fpn_resnet50_focal.pth"
-    model_name = Path(model_path).stem
-
-    save_path = os.path.join(cfg.root_path, 'results', model_name)
-    Path(save_path).mkdir(parents=True, exist_ok=True)
-
-    x_dir = os.path.join(cfg.data_path, 'img_syn_raw', 'train')
-    y_dir = os.path.join(cfg.data_path, 'synthetic', 'train', 'labcmp')
-    z_dir = os.path.join(cfg.data_path, 'synthetic', 'train', 'depth')
-
-    files = os.listdir(x_dir)
-    cases = np.zeros(len(files), dtype=int)
-    for idx, filename in enumerate(files):
-        case = int(re.sub("[^0-9]", "", filename.split('_')[1]))
-        cases[idx] = case
-
-    sequences = np.unique(cases)
-    np.random.shuffle(sequences)
-    training, validation = sequences[:int(.8 * len(sequences))], sequences[int(.8 * len(sequences)):]
-
-    train_files, train_masks, train_depths, train_keys, valid_files, valid_masks, valid_depths, val_keys, = [], [], [], [], [], [], [], []
-
-    for img_file in os.listdir(x_dir):
-        mask_name = img_file.replace('_Scene.png', '.bmp')
-        depth_name = img_file.replace('_Scene.png', '.png')
-        if os.path.isfile(os.path.join(y_dir, mask_name)) and os.path.isfile(os.path.join(z_dir, depth_name)):
-            case = int(re.sub("[^0-9]", "", img_file.split('_')[1]))
-            frame = int(re.sub("[^0-9]", "", img_file.split('_')[2]))
-            key = key = ((1 << case) << 16) + (1 << frame)
-
-            if case in training:
-                train_files.append(img_file)
-                train_masks.append(mask_name)
-                train_depths.append(depth_name)
-                train_keys.append(key)
-            if case in validation:
-                valid_files.append(img_file)
-                valid_masks.append(mask_name)
-                valid_depths.append(depth_name)
-                val_keys.append(key)
+    print("=" * 30 + "EVALUATION" + "=" * 30)
 
     classes = ["nonbridge", "slab", "beam", "column", "nonstructural", "rail", "sleeper"]
+    model_path = "/home/kb/ownCloud/data/fpn_resnet50_monte-carlo.pth"
+    model_name = Path(model_path).stem
 
     model = torch.load(model_path, map_location=torch.device('cpu'))
     model.eval()
+    for each_module in model.modules():
+        if each_module.__class__.__name__.startswith('Dropout'):
+            each_module.train()
 
     preprocessing_fn = smp.encoders.get_preprocessing_fn(cfg.backbone, cfg.pretrained)
 
+    save_path = os.path.join(cfg.root_path, 'validation', model_name)
+    Path(save_path).mkdir(parents=True, exist_ok=True)
+
     if not cfg.lmdb:
+        x_dir = os.path.join(cfg.data_path, 'img_syn_raw', 'train')
+        y_dir = os.path.join(cfg.data_path, 'synthetic', 'train', 'labcmp')
+        z_dir = os.path.join(cfg.data_path, 'synthetic', 'train', 'depth')
+
+        files = os.listdir(x_dir)
+        cases = np.zeros(len(files), dtype=int)
+        for idx, filename in enumerate(files):
+            case = int(re.sub("[^0-9]", "", filename.split('_')[1]))
+            cases[idx] = case
+
+        sequences = np.unique(cases)
+        np.random.shuffle(sequences)
+        training, validation = sequences[:int(.8 * len(sequences))], sequences[int(.8 * len(sequences)):]
+
+        train_files, train_masks, train_depths, train_keys, valid_files, valid_masks, valid_depths, val_keys, = [], [], [], [], [], [], [], []
+
+        for img_file in os.listdir(x_dir):
+            mask_name = img_file.replace('_Scene.png', '.bmp')
+            depth_name = img_file.replace('_Scene.png', '.png')
+            if os.path.isfile(os.path.join(y_dir, mask_name)) and os.path.isfile(os.path.join(z_dir, depth_name)):
+                case = int(re.sub("[^0-9]", "", img_file.split('_')[1]))
+                frame = int(re.sub("[^0-9]", "", img_file.split('_')[2]))
+                key = (case << 16) + frame
+
+                if case in training:
+                    train_files.append(img_file)
+                    train_masks.append(mask_name)
+                    train_depths.append(depth_name)
+                    train_keys.append(key)
+                if case in validation:
+                    valid_files.append(img_file)
+                    valid_masks.append(mask_name)
+                    valid_depths.append(depth_name)
+                    val_keys.append(key)
+
         valid_dataset = Dataset(
             x_dir,
             y_dir,
@@ -77,7 +81,11 @@ def eval_model(cfg):
             preprocessing=get_preprocessing(preprocessing_fn),
             classes=classes,
         )
+
     else:
+        with open('val_keys', 'rb') as fp:
+            val_keys = pickle.load(fp)
+
         valid_dataset = TokaidoLMDBDepth(
             db_path=os.path.join(cfg.data_path, 'tokaido_depth_lmdb'),
             keys=val_keys,
@@ -90,7 +98,6 @@ def eval_model(cfg):
 
     # Dice/F1 score - https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient
     # IoU/Jaccard score - https://en.wikipedia.org/wiki/Jaccard_index
-
 
     # plot parameters
     t = 1
@@ -113,7 +120,6 @@ def eval_model(cfg):
         gt_mask = gt_mask.squeeze()
         gt_depth = gt_mask[-1]
         gt_mask = gt_mask[:len(classes)]
-        #x_tensor = image.to(cfg.device).unsqueeze(0)
         pr_mask = model.predict(image)
         pr_mask = pr_mask.squeeze()
         pr_mask, pr_depth = torch.split(pr_mask, [7, 1], dim=0)
@@ -182,6 +188,7 @@ if __name__ == "__main__":
     # I/O parameters
     parser.add_argument('--root-path', type=str, default='.')
     parser.add_argument('--data-path', type=str, default='/home/kb/Documents/data/Tokaido_dataset')
+    parser.add_argument('--model-path', type=str, default='/home/kb/ownCloud/data/fpn_resnet50_monte-carlo.pth')
 
     # Model parameters
     parser.add_argument('--device', type=str, default='cpu')
