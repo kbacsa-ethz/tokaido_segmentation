@@ -120,7 +120,15 @@ def eval_model(cfg):
         gt_mask = gt_mask.squeeze()
         gt_depth = gt_mask[-1]
         gt_mask = gt_mask[:len(classes)]
-        pr_mask = model.predict(image)
+
+        preds = []
+        for i in range(cfg.monte_carlo):
+            pred = model.predict(image)
+            preds.append(pred)
+
+        predictions = torch.stack(preds, dim=-1)
+        pr_mask = predictions.mean(dim=-1)
+
         pr_mask = pr_mask.squeeze()
         pr_mask, pr_depth = torch.split(pr_mask, [7, 1], dim=0)
         pr_mask = pr_mask.cpu().numpy().round()
@@ -191,6 +199,7 @@ if __name__ == "__main__":
     parser.add_argument('--model-path', type=str, default='/home/kb/ownCloud/data/fpn_resnet50_monte-carlo.pth')
 
     # Model parameters
+    parser.add_argument('--monte_carlo', type=int, default=50)
     parser.add_argument('--device', type=str, default='cpu')
     parser.add_argument('--backbone', type=str, default='resnet50')
     parser.add_argument('--pretrained', type=str, default='imagenet')
