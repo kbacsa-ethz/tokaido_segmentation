@@ -131,8 +131,8 @@ def train(cfg):
     #loss = smp.utils.losses.FocalLoss()
 
     # penalty weight per class
-    gamma = 1.
-    alpha = [1.] * (len(classes)+1)
+    gamma = 2.
+    alpha = [0.9977271, 0.59993025, 0.85252386, 0.8816177, 0.84685007, 0.9727033, 0.99270273, 1.]
     loss = smp.utils.base.SumOfLosses(
         smp.utils.losses.DiceLoss(),
         smp.utils.losses.FocalLoss(gamma=gamma, alpha=alpha)
