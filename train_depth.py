@@ -120,7 +120,6 @@ def train(cfg):
             preprocessing=get_preprocessing(preprocessing_fn)
         )
 
-    visual_dataset = torch.utils.data.Subset(valid_dataset, list(range(10)))
     train_loader = DataLoader(train_dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.num_workers, pin_memory=True if cfg.device == 'cuda' else False)
     valid_loader = DataLoader(valid_dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.num_workers, pin_memory=True if cfg.device == 'cuda' else False)
 
@@ -178,8 +177,6 @@ def train(cfg):
         6: [0.0, 0.0, 1.0, t],
     }
 
-    labels = {idx: class_name for idx, class_name in enumerate(classes)}
-
     max_score = 0
     with experiment.train():
         for epoch in range(0, cfg.n_epochs):
@@ -188,57 +185,6 @@ def train(cfg):
             valid_logs = valid_epoch.run(valid_loader)
 
             experiment.log_metric("iou_score", valid_logs['iou_score'], step=epoch)
-
-            for img_idx in range(10):
-                # inference
-                image, gt_mask = visual_dataset[img_idx]
-                gt_mask = gt_mask.squeeze()
-                gt_depth = gt_mask[-1]
-                gt_mask = gt_mask[:len(classes)]
-                x_tensor = torch.from_numpy(image).to(cfg.device).unsqueeze(0)
-                pr_mask = model.predict(x_tensor)
-                pr_mask = pr_mask.squeeze()
-                pr_mask, pr_depth = torch.split(pr_mask, [7, 1], dim=0)
-                pr_mask = pr_mask.cpu().numpy().round()
-                pr_depth = pr_depth.cpu().numpy()
-
-                # adapt for plot
-                image = np.moveaxis(image, 0, -1)
-                gt_mask = np.moveaxis(gt_mask, 0, -1)
-                pr_mask = np.moveaxis(pr_mask, 0, -1)
-                pr_depth = np.moveaxis(pr_depth, 0, -1)
-                gt_mask = np.argmax(gt_mask, axis=-1)
-                pr_mask = np.argmax(pr_mask, axis=-1)
-
-                fig = plt.figure(figsize=(20, 10))
-                plt.tight_layout()
-                ax1 = fig.add_subplot(231)
-                ax2 = fig.add_subplot(232)
-                ax3 = fig.add_subplot(233)
-                ax4 = fig.add_subplot(234)
-                ax5 = fig.add_subplot(235)
-                ax1.title.set_text('Image')
-                ax2.title.set_text('Model segmentation')
-                ax3.title.set_text('Ground truth')
-                ax4.title.set_text('Predicted depth')
-                ax5.title.set_text('True depth')
-
-                ax1.imshow(image)
-
-                array_show = np.array([[cmap[i] for i in j] for j in pr_mask])
-                patches = [mpatches.Patch(color=cmap[i], label=labels[i]) for i in cmap]
-                ax2.imshow(array_show)
-                ax2.legend(handles=patches, loc=4, borderaxespad=0.)
-
-                array_show = np.array([[cmap[i] for i in j] for j in gt_mask])
-                patches = [mpatches.Patch(color=cmap[i], label=labels[i]) for i in cmap]
-                ax3.imshow(array_show)
-                ax3.legend(handles=patches, loc=4, borderaxespad=0.)
-
-                ax4.imshow(pr_depth)
-                ax5.imshow(gt_depth)
-
-                experiment.log_figure(figure=fig, figure_name="image_{}_epoch_{}".format(img_idx, epoch))
 
             # do something (save model, change lr, etc.)
             if max_score < valid_logs['iou_score']:
