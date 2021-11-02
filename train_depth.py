@@ -1,5 +1,3 @@
-from comet_ml import Experiment
-
 import os
 import pickle
 import argparse
@@ -18,9 +16,8 @@ from data_aug import get_training_augmentation, get_validation_augmentation, get
 
 def train(cfg):
 
+    print("="*30 + "TRAINING" + "="*30)
     hyperparams = vars(cfg)
-    experiment = Experiment(project_name="tokaido_segmentation", api_key="Bm8mJ7xbMDa77te70th8PNcT8", disabled=not cfg.comet)
-    experiment.log_parameters(hyperparams)
 
     # create experiment directory and save config
     now = datetime.now()
@@ -65,7 +62,7 @@ def train(cfg):
             if os.path.isfile(os.path.join(y_dir, mask_name)) and os.path.isfile(os.path.join(z_dir, depth_name)):
                 case = int(re.sub("[^0-9]", "", img_file.split('_')[1]))
                 frame = int(re.sub("[^0-9]", "", img_file.split('_')[2]))
-                key = (case << 16) +  frame
+                key = (case << 16) + frame
 
                 if case in training:
                     train_files.append(img_file)
@@ -169,36 +166,23 @@ def train(cfg):
         verbose=True,
     )
 
-    # plot parameters
-    t = 1
-    cmap = {
-        0: [1.0, 0.0, 0.0, t],
-        1: [0.7, 0.3, 0.1, t],
-        2: [1.0, 0.6, 0.2, t],
-        3: [0.0, 1.0, 0.0, t],
-        4: [0.1, 0.7, 0.3, t],
-        5: [0.2, 1.0, 0.6, t],
-        6: [0.0, 0.0, 1.0, t],
-    }
-
     max_score = 0
-    with experiment.train():
-        for epoch in range(0, cfg.n_epochs):
-            print('\nEpoch: {}'.format(epoch))
-            train_logs = train_epoch.run(train_loader)
+    for epoch in range(0, cfg.n_epochs):
+        print('\nEpoch: {}'.format(epoch))
+        train_logs = train_epoch.run(train_loader)
+        if epoch == 0 or epoch == (cfg.num_epochs-1) or cfg.val_in_loop:
             valid_logs = valid_epoch.run(valid_loader)
 
-            experiment.log_metric("iou_score", valid_logs['iou_score'], step=epoch)
+        # do something (save model, change lr, etc.)
+        if max_score < valid_logs['iou_score']:
+            max_score = valid_logs['iou_score']
+            torch.save(model, os.path.join(save_path, 'best_model.pth'))
+            print('Model saved!')
 
-            # do something (save model, change lr, etc.)
-            if max_score < valid_logs['iou_score']:
-                max_score = valid_logs['iou_score']
-                torch.save(model, os.path.join(save_path, 'best_model.pth'))
-                print('Model saved!')
+        if epoch == 25:
+            optimizer.param_groups[0]['lr'] = 1e-5
+            print('Decrease decoder learning rate to 1e-5!')
 
-            if epoch == 25:
-                optimizer.param_groups[0]['lr'] = 1e-5
-                print('Decrease decoder learning rate to 1e-5!')
     return 0
 
 
@@ -223,6 +207,7 @@ if __name__ == "__main__":
     parser.add_argument('--num-workers', type=int, default=2)
     parser.add_argument('--n-epochs', type=int, default=30)
     parser.add_argument('--learning-rate', type=float, default=1e-4)
+    parser.add_argument('--val_in_loop', action='store_true')
     parser.add_argument('--lmdb', action='store_true')
     parser.add_argument('--comet', action='store_true')
 
