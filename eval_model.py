@@ -20,10 +20,9 @@ def eval_model(cfg):
     print("=" * 30 + "EVALUATION" + "=" * 30)
 
     classes = ["nonbridge", "slab", "beam", "column", "nonstructural", "rail", "sleeper"]
-    model_path = "/home/kb/ownCloud/data/fpn_resnet50_monte-carlo.pth"
-    model_name = Path(model_path).stem
+    model_name = Path(cfg.model_path).stem
 
-    model = torch.load(model_path, map_location=torch.device('cpu'))
+    model = torch.load(cfg.model_path, map_location=torch.device('cpu'))
     model.eval()
     for each_module in model.modules():
         if each_module.__class__.__name__.startswith('Dropout'):
@@ -116,6 +115,7 @@ def eval_model(cfg):
     sample_num = 0
     confusion_array = np.zeros([7, 7])
     for image, gt_mask in tqdm(valid_loader):
+        image = image.to(cfg.device)
         # inference
         gt_mask = gt_mask.squeeze()
         gt_depth = gt_mask[-1]
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     parser.add_argument('--model-path', type=str, default='/home/kb/ownCloud/data/fpn_resnet50_monte-carlo.pth')
 
     # Model parameters
-    parser.add_argument('--monte_carlo', type=int, default=50)
+    parser.add_argument('--monte-carlo', type=int, default=50)
     parser.add_argument('--device', type=str, default='cpu')
     parser.add_argument('--backbone', type=str, default='resnet50')
     parser.add_argument('--pretrained', type=str, default='imagenet')
