@@ -1,6 +1,7 @@
 from comet_ml import Experiment
 
 import os
+import pickle
 import argparse
 from datetime import datetime
 from pathlib import Path
@@ -8,8 +9,6 @@ import json
 import re
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 import segmentation_models_pytorch as smp
 from tokaido_depth import Dataset
 from lmdb_data_depth import TokaidoLMDBDepth
@@ -31,41 +30,6 @@ def train(cfg):
     with open(os.path.join(save_path, 'config.txt'), 'w') as f:
         json.dump(cfg.__dict__, f, indent=2)
 
-    x_dir = os.path.join(cfg.data_path, 'img_syn_raw', 'train')
-    y_dir = os.path.join(cfg.data_path, 'synthetic', 'train', 'labcmp')
-    z_dir = os.path.join(cfg.data_path, 'synthetic', 'train', 'depth')
-
-    files = os.listdir(x_dir)
-    cases = np.zeros(len(files), dtype=int)
-    for idx, filename in enumerate(files):
-        case = int(re.sub("[^0-9]", "", filename.split('_')[1]))
-        cases[idx] = case
-
-    sequences = np.unique(cases)
-    np.random.shuffle(sequences)
-    training, validation = sequences[:int(.8 * len(sequences))], sequences[int(.8 * len(sequences)):]
-
-    train_files, train_masks, train_depths, train_keys, valid_files, valid_masks, valid_depths, val_keys, = [], [], [], [], [], [], [], []
-
-    for img_file in os.listdir(x_dir):
-        mask_name = img_file.replace('_Scene.png', '.bmp')
-        depth_name = img_file.replace('_Scene.png', '.png')
-        if os.path.isfile(os.path.join(y_dir, mask_name)) and os.path.isfile(os.path.join(z_dir, depth_name)):
-            case = int(re.sub("[^0-9]", "", img_file.split('_')[1]))
-            frame = int(re.sub("[^0-9]", "", img_file.split('_')[2]))
-            key = key = ((1 << case) << 16) + (1 << frame)
-
-            if case in training:
-                train_files.append(img_file)
-                train_masks.append(mask_name)
-                train_depths.append(depth_name)
-                train_keys.append(key)
-            if case in validation:
-                valid_files.append(img_file)
-                valid_masks.append(mask_name)
-                valid_depths.append(depth_name)
-                val_keys.append(key)
-
     classes = ["nonbridge", "slab", "beam", "column", "nonstructural", "rail", "sleeper"]
 
     model = smp.create_model(
@@ -79,6 +43,41 @@ def train(cfg):
     preprocessing_fn = smp.encoders.get_preprocessing_fn(cfg.backbone, cfg.pretrained)
 
     if not cfg.lmdb:
+        x_dir = os.path.join(cfg.data_path, 'img_syn_raw', 'train')
+        y_dir = os.path.join(cfg.data_path, 'synthetic', 'train', 'labcmp')
+        z_dir = os.path.join(cfg.data_path, 'synthetic', 'train', 'depth')
+
+        files = os.listdir(x_dir)
+        cases = np.zeros(len(files), dtype=int)
+        for idx, filename in enumerate(files):
+            case = int(re.sub("[^0-9]", "", filename.split('_')[1]))
+            cases[idx] = case
+
+        sequences = np.unique(cases)
+        np.random.shuffle(sequences)
+        training, validation = sequences[:int(.8 * len(sequences))], sequences[int(.8 * len(sequences)):]
+
+        train_files, train_masks, train_depths, train_keys, valid_files, valid_masks, valid_depths, val_keys, = [], [], [], [], [], [], [], []
+
+        for img_file in os.listdir(x_dir):
+            mask_name = img_file.replace('_Scene.png', '.bmp')
+            depth_name = img_file.replace('_Scene.png', '.png')
+            if os.path.isfile(os.path.join(y_dir, mask_name)) and os.path.isfile(os.path.join(z_dir, depth_name)):
+                case = int(re.sub("[^0-9]", "", img_file.split('_')[1]))
+                frame = int(re.sub("[^0-9]", "", img_file.split('_')[2]))
+                key = (case << 16) +  frame
+
+                if case in training:
+                    train_files.append(img_file)
+                    train_masks.append(mask_name)
+                    train_depths.append(depth_name)
+                    train_keys.append(key)
+                if case in validation:
+                    valid_files.append(img_file)
+                    valid_masks.append(mask_name)
+                    valid_depths.append(depth_name)
+                    val_keys.append(key)
+
         train_dataset = Dataset(
             x_dir,
             y_dir,
@@ -104,6 +103,11 @@ def train(cfg):
         )
 
     else:
+        with open('train_keys', 'rb') as fp:
+            train_keys = pickle.load(fp)
+        with open('val_keys', 'rb') as fp:
+            val_keys = pickle.load(fp)
+
         train_dataset = TokaidoLMDBDepth(
             db_path=os.path.join(cfg.data_path, 'tokaido_depth_lmdb'),
             keys=train_keys,
