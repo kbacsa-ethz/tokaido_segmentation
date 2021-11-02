@@ -167,7 +167,7 @@ def train(cfg):
     max_score = 0
     for epoch in range(0, cfg.n_epochs):
         print('\nEpoch: {}'.format(epoch))
-        #train_logs = train_epoch.run(train_loader)
+        train_logs = train_epoch.run(train_loader)
         if epoch == 0 or epoch == (cfg.n_epochs-1) or cfg.val_in_loop:
             valid_logs = valid_epoch.run(valid_loader)
 
