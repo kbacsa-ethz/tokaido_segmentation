@@ -7,4 +7,3 @@ comet_ml
 lmdb
 pyarrow
 pandas
-pickle
