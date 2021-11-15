@@ -12,7 +12,6 @@ class Conv3x3GNReLU(nn.Module):
                 in_channels, out_channels, (3, 3), stride=1, padding=1, bias=False
             ),
             nn.GroupNorm(32, out_channels),
-            nn.Dropout2d(0.2, inplace=True),
             nn.ReLU(inplace=True),
         )
 
@@ -27,12 +26,10 @@ class FPNBlock(nn.Module):
     def __init__(self, pyramid_channels, skip_channels):
         super().__init__()
         self.skip_conv = nn.Conv2d(skip_channels, pyramid_channels, kernel_size=1)
-        self.dropout = nn.Dropout2d(0.2)
 
     def forward(self, x, skip=None):
         x = F.interpolate(x, scale_factor=2, mode="nearest")
         skip = self.skip_conv(skip)
-        skip = self.dropout(skip)
         x = x + skip
         return x
 

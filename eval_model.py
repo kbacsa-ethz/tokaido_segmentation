@@ -121,15 +121,8 @@ def eval_model(cfg):
         gt_depth = gt_mask[-1]
         gt_mask = gt_mask[:len(classes)]
 
-        preds = []
-        for i in range(cfg.monte_carlo):
-            pred = model.predict(image)
-            preds.append(pred)
-
-        predictions = torch.stack(preds, dim=-1)
-        pr_mask = predictions.mean(dim=-1)
-
-        pr_mask = pr_mask.squeeze()
+        predictions = model.predict(image)
+        pr_mask = predictions.squeeze()
         pr_mask, pr_depth = torch.split(pr_mask, [7, 1], dim=0)
         pr_mask = pr_mask.cpu().numpy().round()
         pr_depth = pr_depth.cpu().numpy()

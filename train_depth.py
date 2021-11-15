@@ -20,7 +20,7 @@ def train(cfg):
     # create experiment directory and save config
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%Y_%H-%M-%S")
-    save_path = os.path.join(cfg.data_path, 'runs', dt_string)
+    save_path = os.path.join(cfg.root_path, 'runs', dt_string)
     Path(save_path).mkdir(parents=True, exist_ok=True)
     with open(os.path.join(save_path, 'config.txt'), 'w') as f:
         json.dump(cfg.__dict__, f, indent=2)
@@ -155,11 +155,10 @@ def train(cfg):
         verbose=True,
     )
 
-    valid_epoch = smp.utils.train.ValidEpochMonteCarlo(
+    valid_epoch = smp.utils.train.ValidEpoch(
         model,
         loss=loss,
         metrics=metrics,
-        monte_carlo_it=cfg.monte_carlo,
         device=cfg.device,
         verbose=True,
     )
