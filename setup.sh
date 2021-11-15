@@ -1,5 +1,5 @@
 # setup script
-PATH=$PATH:$PWD/miniconda/bin
+PATH=$PATH:$HOME/miniconda/bin
 curl -sLo ~/miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-py38_4.8.2-Linux-x86_64.sh \
  && chmod +x ~/miniconda.sh \
  && ~/miniconda.sh -b -p ~/miniconda \
