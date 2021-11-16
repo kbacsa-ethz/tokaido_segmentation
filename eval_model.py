@@ -22,7 +22,7 @@ def eval_model(cfg):
     classes = ["nonbridge", "slab", "beam", "column", "nonstructural", "rail", "sleeper"]
     model_name = Path(cfg.model_path).stem
 
-    model = torch.load(cfg.model_path, map_location=torch.device('cpu'))
+    model = torch.load(cfg.model_path, map_location=torch.device(cfg.device))
     model.eval()
     for each_module in model.modules():
         if each_module.__class__.__name__.startswith('Dropout'):
@@ -93,7 +93,7 @@ def eval_model(cfg):
             preprocessing=get_preprocessing(preprocessing_fn)
         )
 
-    valid_loader = DataLoader(valid_dataset, batch_size=1, shuffle=True, num_workers=cfg.num_workers)
+    valid_loader = DataLoader(valid_dataset, batch_size=1, shuffle=False, num_workers=cfg.num_workers)
 
     # Dice/F1 score - https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient
     # IoU/Jaccard score - https://en.wikipedia.org/wiki/Jaccard_index

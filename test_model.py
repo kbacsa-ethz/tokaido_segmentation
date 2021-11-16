@@ -9,6 +9,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import segmentation_models_pytorch as smp
+from tokaido_depth import TestDataset
 from lmdb_data_depth_test import TokaidoLMDBDepth
 from torch.utils.data import DataLoader
 from data_aug import get_validation_augmentation, get_preprocessing
@@ -21,7 +22,7 @@ def test_model(cfg):
     classes = ["nonbridge", "slab", "beam", "column", "nonstructural", "rail", "sleeper"]
     model_name = Path(cfg.model_path).stem
 
-    model = torch.load(cfg.model_path, map_location=torch.device('cpu'))
+    model = torch.load(cfg.model_path, map_location=torch.device(cfg.device))
     model.eval()
     for each_module in model.modules():
         if each_module.__class__.__name__.startswith('Dropout'):
@@ -35,7 +36,15 @@ def test_model(cfg):
     Path(target_path).mkdir(parents=True, exist_ok=True)
 
     if not cfg.lmdb:
-        raise NotImplementedError
+        x_dir = os.path.join(cfg.data_path, 'img_syn_raw', 'test')
+        files = os.listdir(x_dir)
+        test_dataset = TestDataset(
+            x_dir,
+            files,
+            augmentation=get_validation_augmentation(),
+            preprocessing=get_preprocessing(preprocessing_fn),
+            classes=classes,
+        )
     else:
         with open('test_keys', 'rb') as fp:
             test_keys = pickle.load(fp)
@@ -48,7 +57,7 @@ def test_model(cfg):
             preprocessing=get_preprocessing(preprocessing_fn)
         )
 
-    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True, num_workers=cfg.num_workers)
+    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=cfg.num_workers)
 
     # Dice/F1 score - https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient
     # IoU/Jaccard score - https://en.wikipedia.org/wiki/Jaccard_index

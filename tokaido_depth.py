@@ -92,6 +92,62 @@ class Dataset(BaseDataset):
         return len(self.images_fps)
 
 
+class TestDataset(BaseDataset):
+    """Tokaido Dataset. Read images, apply augmentation and preprocessing transformations.
+
+    Args:
+        images_dir (str): path to images folder
+        masks_dir (str): path to segmentation masks folder
+        class_values (list): values of classes to extract from segmentation mask
+        augmentation (albumentations.Compose): data transfromation pipeline
+            (e.g. flip, scale, etc.)
+        preprocessing (albumentations.Compose): data preprocessing
+            (e.g. noralization, shape manipulation, etc.)
+
+    """
+
+    CLASSES = ["nonbridge", "slab", "beam", "column", "nonstructural", "rail", "sleeper"]
+
+    def __init__(
+            self,
+            images_dir,
+            image_files,
+            classes=None,
+            augmentation=None,
+            preprocessing=None,
+    ):
+
+        self.images_fps = [os.path.join(images_dir, image_id) for image_id in image_files]
+
+        # convert str names to class values on masks
+        self.class_values = [self.CLASSES.index(cls.lower())+1 for cls in classes]
+
+        self.augmentation = augmentation
+        self.preprocessing = preprocessing
+
+    def __getitem__(self, i):
+
+        # read data
+        image = cv2.imread(self.images_fps[i])
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = image[::3, ::3, :]
+
+        # apply augmentations
+        if self.augmentation:
+            sample = self.augmentation(image=image)
+            image = sample['image']
+
+        # apply preprocessing
+        if self.preprocessing:
+            sample = self.preprocessing(image=image)
+            image = sample['image']
+
+        return image
+
+    def __len__(self):
+        return len(self.images_fps)
+
+
 if __name__ == "__main__":
     x_dir = os.path.join('/home/kb/Documents/data/Tokaido_dataset', 'img_syn_raw', 'train')
     y_dir = os.path.join('/home/kb/Documents/data/Tokaido_dataset', 'synthetic', 'train', 'labcmp')
