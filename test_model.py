@@ -86,7 +86,7 @@ def test_model(cfg):
         pr_depth = pr_depth.cpu().numpy()
 
         # adapt for plot
-        img = image.detach().numpy().squeeze()
+        img = image.cpu().detach().numpy().squeeze()
         img = np.moveaxis(img, 0, -1)
         pr_mask = np.moveaxis(pr_mask, 0, -1)
         pr_depth = np.moveaxis(pr_depth, 0, -1)
