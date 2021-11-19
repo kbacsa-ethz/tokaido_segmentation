@@ -142,7 +142,8 @@ class TestDataset(BaseDataset):
             sample = self.preprocessing(image=image)
             image = sample['image']
 
-        return image, self.images_fps[i]
+        file_name = os.path.basename(self.images_fps[i])
+        return image, file_name
 
     def __len__(self):
         return len(self.images_fps)

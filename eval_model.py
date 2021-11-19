@@ -167,17 +167,6 @@ def eval_model(cfg):
         ax5.imshow(gt_depth)
         plt.savefig(os.path.join(save_path, "{:05d}.png".format(sample_num)))
         sample_num += 1
-        #plt.show()
-
-    import pandas as pd
-    import seaborn as sn
-
-    df_cm = pd.DataFrame(confusion_array, range(confusion_array.shape[0]), range(confusion_array.shape[0]))
-    plt.figure(figsize=(10,7))
-    sn.set(font_scale=1.4)  # for label size
-    sn.heatmap(df_cm, annot=True, annot_kws={"size": 16})  # font size
-    plt.savefig(os.path.join(save_path, "confusion.png"))
-    #plt.show()
 
     return 0
 

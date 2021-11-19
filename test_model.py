@@ -30,7 +30,7 @@ def test_model(cfg):
 
     preprocessing_fn = smp.encoders.get_preprocessing_fn(cfg.backbone, cfg.pretrained)
 
-    save_path = os.path.join(cfg.root_path, 'testing', model_name)
+    save_path = os.path.join(cfg.root_path, 'test', model_name)
     target_path = os.path.join(cfg.data_path, 'synthetic', 'test', 'labcmp')
     Path(save_path).mkdir(parents=True, exist_ok=True)
     Path(target_path).mkdir(parents=True, exist_ok=True)
@@ -113,7 +113,6 @@ def test_model(cfg):
         pr_mask = pr_mask.astype(np.uint8) + 1
 
         Image.fromarray(pr_mask).save(os.path.join(target_path, file_name[0]))
-        break
 
     # component labels
     csv_read = os.path.join(cfg.data_path, 'files_test.csv')
