@@ -112,7 +112,7 @@ def test_model(cfg):
 
         pr_mask = pr_mask.astype(np.uint8) + 1
 
-        Image.fromarray(pr_mask).save(os.path.join(target_path, file_name[0].replace('_Scene.png', '.bmp'))
+        Image.fromarray(pr_mask).save(os.path.join(target_path, file_name[0].replace('_Scene.png', '.bmp')))
 
     # component labels
     csv_read = os.path.join(cfg.data_path, 'files_test.csv')
