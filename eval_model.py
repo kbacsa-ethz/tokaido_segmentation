@@ -168,6 +168,10 @@ def eval_model(cfg):
         plt.savefig(os.path.join(save_path, "{:05d}.png".format(sample_num)))
         sample_num += 1
 
+        # clear memory
+        plt.clf()
+        plt.close("all")
+
     return 0
 
 
