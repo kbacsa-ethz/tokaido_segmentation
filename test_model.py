@@ -114,6 +114,10 @@ def test_model(cfg):
 
         Image.fromarray(pr_mask).save(os.path.join(target_path, file_name[0].replace('_Scene.png', '.bmp')))
 
+        # clear memory
+        plt.clf()
+        plt.close("all")
+
     # component labels
     csv_read = os.path.join(cfg.data_path, 'files_test.csv')
     im_col = 0
