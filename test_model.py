@@ -110,8 +110,9 @@ def test_model(cfg):
         ax3.imshow(pr_depth)
         plt.savefig(os.path.join(save_path, file_name[0].replace('.bmp', '.png')))
 
+        # preprocess before submission labels
         pr_mask = pr_mask.astype(np.uint8) + 1
-
+        pr_mask = pr_mask[12:-12, :]
         Image.fromarray(pr_mask).save(os.path.join(target_path, file_name[0].replace('_Scene.png', '.bmp')))
 
         # clear memory
