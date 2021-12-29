@@ -81,6 +81,8 @@ class FocalLoss(base.Loss):
             y_gt = torch.argmax(y_gt, dim=-1, keepdim=True)
 
         logpt = F_torch.log_softmax(y_pr)
+        indexes = torch.LongTensor(list(set(list(range(8))) - set(self.ignore_channels)))
+        logpt = torch.index_select(logpt, 1, indexes)
         logpt = logpt.gather(1, y_gt.long())
         logpt = logpt.view(-1)
         pt = torch.autograd.Variable(logpt.data.exp())

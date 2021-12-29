@@ -131,10 +131,13 @@ def train(cfg):
     # penalty weight per class
     gamma = 2.
     alpha = [0.9977271, 0.59993025, 0.85252386, 0.8816177, 0.84685007, 0.9727033, 0.99270273, 1.]
+    """
     loss = smp.utils.base.SumOfLosses(
         smp.utils.losses.DiceLoss(),
         smp.utils.losses.FocalLoss(gamma=gamma, alpha=alpha)
     )
+    """
+    loss = smp.utils.losses.FocalLoss(gamma=gamma, alpha=alpha, ignore_channels=[0])
 
     metrics = [
         smp.utils.metrics.IoU(threshold=0.5),
@@ -189,11 +192,11 @@ if __name__ == "__main__":
 
     # I/O parameters
     parser.add_argument('--root-path', type=str, default='.')
-    parser.add_argument('--data-path', type=str, default='/home/kb/Documents/data/Tokaido_dataset')
+    parser.add_argument('--data-path', type=str, default='./')
 
     # Model parameters
     parser.add_argument('--arch', type=str, default='fpn')
-    parser.add_argument('--backbone', type=str, default='resnet18')
+    parser.add_argument('--backbone', type=str, default='efficientnet-b0')
     parser.add_argument('--pretrained', type=str, default='imagenet')
     parser.add_argument('--activation', type=str, default='sigmoid')
     parser.add_argument('--monte_carlo', type=int, default=50)
@@ -201,7 +204,7 @@ if __name__ == "__main__":
 
     # Training parameters
     parser.add_argument('--batch-size', type=int, default=2)
-    parser.add_argument('--num-workers', type=int, default=2)
+    parser.add_argument('--num-workers', type=int, default=0)
     parser.add_argument('--n-epochs', type=int, default=30)
     parser.add_argument('--learning-rate', type=float, default=1e-4)
     parser.add_argument('--val-in-loop', action='store_true')
