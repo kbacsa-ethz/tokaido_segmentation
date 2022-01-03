@@ -137,7 +137,7 @@ def train(cfg):
         smp.utils.losses.FocalLoss(gamma=gamma, alpha=alpha)
     )
     """
-    loss = smp.utils.losses.FocalLoss(gamma=gamma, alpha=alpha, ignore_channels=[0])
+    loss = smp.utils.losses.FocalLoss(gamma=gamma, alpha=alpha, ignore_channels=[0], device=cfg.device)
 
     metrics = [
         smp.utils.metrics.IoU(threshold=0.5),

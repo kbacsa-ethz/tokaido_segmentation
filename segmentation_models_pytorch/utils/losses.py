@@ -61,7 +61,7 @@ class FocalLoss(base.Loss):
             self.alpha = torch.Tensor(alpha)
 
         self.activation = Activation(activation)
-        self.ignore_channels = ignore_channels
+        self.indexes = torch.LongTensor(list(set(list(range(8))) - set(ignore_channels)), device=self.device)
 
     @staticmethod
     def flatten(tensor):
@@ -81,8 +81,7 @@ class FocalLoss(base.Loss):
             y_gt = torch.argmax(y_gt, dim=-1, keepdim=True)
 
         logpt = F_torch.log_softmax(y_pr)
-        indexes = torch.LongTensor(list(set(list(range(8))) - set(self.ignore_channels)))
-        logpt = torch.index_select(logpt, 1, indexes)
+        logpt = torch.index_select(logpt, 1, self.indexes)
         logpt = logpt.gather(1, y_gt.long())
         logpt = logpt.view(-1)
         pt = torch.autograd.Variable(logpt.data.exp())

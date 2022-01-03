@@ -1,6 +1,7 @@
 import re
 import torch.nn as nn
 
+
 class BaseObject(nn.Module):
 
     def __init__(self, name=None):
@@ -22,6 +23,10 @@ class Metric(BaseObject):
 
 
 class Loss(BaseObject):
+
+    def __init__(self, device):
+        super().__init__()
+        self.device = device
 
     def __add__(self, other):
         if isinstance(other, Loss):
