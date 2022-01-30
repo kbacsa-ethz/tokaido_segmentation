@@ -1,2 +1,3 @@
-# tokaido_segmentation
-Code stolen from [segmentation toolbox](https://github.com/qubvel/segmentation_models.pytorch)
+# Tokaido segmentation
+To reproduce results, run the script :
+```bash run_depth.sh```
